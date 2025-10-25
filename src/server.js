@@ -29,9 +29,15 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+app.use(requestLogger); // placé avant les routes pour logger toutes les requêtes
 
 // Servir les fichiers uploadés
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// --- Route d’accueil (évite le 404 sur Render) ---
+app.get("/", (req, res) => {
+  res.send("✅ Backend Ligdi Chat est en ligne et fonctionne correctement !");
+});
 
 // --- Gestion des utilisateurs connectés ---
 const onlineUsers = new Map();
@@ -86,7 +92,6 @@ app.use("/api/users", usersRouter);
 
 // --- Middleware global d'erreurs ---
 app.use(errorHandler);
-app.use(requestLogger);
 
 // --- Lancement du serveur ---
 const PORT = process.env.PORT || 4000;
