@@ -1,0 +1,97 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import cors from "cors";
+import morgan from "morgan";
+import path from "path";
+import { fileURLToPath } from "url";
+
+import authRoutes from "./routes/auth.js";
+import conversationRoutes from "./routes/conversations.js";
+import messageRoutes from "./routes/messages.js";
+import usersRouter from "./routes/users.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import { requestLogger } from "./middleware/requestLogger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*", methods: ["GET", "POST"] },
+});
+
+// --- Config globale ---
+app.use(cors());
+app.use(express.json());
+app.use(morgan("dev"));
+
+// Servir les fichiers uploadés
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// --- Gestion des utilisateurs connectés ---
+const onlineUsers = new Map();
+
+io.on("connection", (socket) => {
+  console.log("✅ Nouveau client connecté :", socket.id);
+
+  socket.on("user_connected", (user) => {
+    onlineUsers.set(user.id, socket.id);
+    io.emit("user_status", { userId: user.id, status: "online" });
+    console.log(`🔵 ${user.email} est en ligne`);
+  });
+
+  socket.on("join_conversation", (conversationId) => {
+    socket.join(`conv:${conversationId}`);
+    console.log(`➡️ Socket ${socket.id} a rejoint conv:${conversationId}`);
+  });
+
+  socket.on("leave_conversation", (conversationId) => {
+    socket.leave(`conv:${conversationId}`);
+    console.log(`⬅️ Socket ${socket.id} a quitté conv:${conversationId}`);
+  });
+
+  socket.on("typing", ({ conversationId, user }) => {
+    socket.to(`conv:${conversationId}`).emit("typing", { user });
+  });
+
+  socket.on("stop_typing", ({ conversationId, user }) => {
+    socket.to(`conv:${conversationId}`).emit("stop_typing", { user });
+  });
+
+  socket.on("disconnect", () => {
+    for (let [userId, sockId] of onlineUsers.entries()) {
+      if (sockId === socket.id) {
+        onlineUsers.delete(userId);
+        io.emit("user_status", { userId, status: "offline" });
+        console.log(`⚪ Utilisateur ${userId} est hors ligne`);
+        break;
+      }
+    }
+    console.log("❌ Client déconnecté :", socket.id);
+  });
+});
+
+app.set("io", io);
+
+// --- Routes API ---
+app.use("/api/auth", authRoutes);
+app.use("/api/conversations", conversationRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/users", usersRouter);
+
+// --- Middleware global d'erreurs ---
+app.use(errorHandler);
+app.use(requestLogger);
+
+// --- Lancement du serveur ---
+const PORT = process.env.PORT || 4000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on ${BASE_URL}`);
+});
