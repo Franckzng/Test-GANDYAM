@@ -21,15 +21,19 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
-});
+
+// ✅ Définir le domaine frontend autorisé (Vercel)
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://ligdi-chat-frontend.vercel.app";
 
 // --- Config globale ---
-app.use(cors());
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(morgan("dev"));
-app.use(requestLogger); // placé avant les routes pour logger toutes les requêtes
+app.use(requestLogger);
 
 // Servir les fichiers uploadés
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -37,6 +41,15 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // --- Route d’accueil (évite le 404 sur Render) ---
 app.get("/", (req, res) => {
   res.send("✅ Backend Ligdi Chat est en ligne et fonctionne correctement !");
+});
+
+// --- Socket.IO avec CORS configuré ---
+const io = new Server(server, {
+  cors: {
+    origin: FRONTEND_URL,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 // --- Gestion des utilisateurs connectés ---
