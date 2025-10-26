@@ -8,7 +8,8 @@ import cors from "cors";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
-import mime from "mime-types"; // ✅ pour servir les bons Content-Type
+import mime from "mime-types"; // ✅ pour gérer les bons Content-Type
+import fs from "fs";
 
 import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
@@ -17,8 +18,6 @@ import usersRouter from "./routes/users.js";
 import uploadRouter from "./routes/upload.js"; // ✅ route upload
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
-
-import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,7 +43,15 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"), {
     setHeaders: (res, filePath) => {
-      const type = mime.lookup(filePath);
+      let type = mime.lookup(filePath);
+
+      // ✅ Correction manuelle pour certains cas
+      if (filePath.endsWith(".mp4")) type = "video/mp4";
+      if (filePath.endsWith(".webm")) type = "video/webm";
+      if (filePath.endsWith(".ogg")) type = "video/ogg";
+      if (filePath.endsWith(".mp3")) type = "audio/mpeg";
+      if (filePath.endsWith(".wav")) type = "audio/wav";
+
       if (type) {
         res.setHeader("Content-Type", type);
       }
@@ -56,6 +63,31 @@ app.use(
 // --- Route d’accueil ---
 app.get("/", (req, res) => {
   res.send("✅ Backend Ligdi Chat est en ligne et fonctionne correctement !");
+});
+
+// --- Route de debug pour vérifier les headers d'un fichier uploadé ---
+app.get("/api/debug-file/:name", (req, res) => {
+  const filePath = path.join(__dirname, "uploads", req.params.name);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "Fichier introuvable" });
+  }
+
+  let type = mime.lookup(filePath) || "inconnu";
+  if (filePath.endsWith(".mp4")) type = "video/mp4";
+  if (filePath.endsWith(".webm")) type = "video/webm";
+  if (filePath.endsWith(".ogg")) type = "video/ogg";
+  if (filePath.endsWith(".mp3")) type = "audio/mpeg";
+  if (filePath.endsWith(".wav")) type = "audio/wav";
+
+  res.json({
+    fichier: req.params.name,
+    mimeType: type,
+    headersAttendus: {
+      "Content-Type": type,
+      "Access-Control-Allow-Origin": FRONTEND_URL
+    }
+  });
 });
 
 // --- Socket.IO avec CORS configuré ---
@@ -118,27 +150,6 @@ app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", usersRouter);
 app.use("/api/upload", uploadRouter); // ✅ ajout de la route upload
-
-
-// --- Route de debug pour vérifier les headers d'un fichier uploadé ---
-app.get("/api/debug-file/:name", (req, res) => {
-  const filePath = path.join(__dirname, "uploads", req.params.name);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Fichier introuvable" });
-  }
-
-  const type = mime.lookup(filePath) || "inconnu";
-  res.json({
-    fichier: req.params.name,
-    mimeDetecte: type,
-    headersAttendus: {
-      "Content-Type": type,
-      "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "*"
-    }
-  });
-});
-
 
 // --- Middleware global d'erreurs ---
 app.use(errorHandler);
