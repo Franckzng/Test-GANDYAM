@@ -18,6 +18,8 @@ import uploadRouter from "./routes/upload.js"; // ✅ route upload
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 
+import fs from "fs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -116,6 +118,27 @@ app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", usersRouter);
 app.use("/api/upload", uploadRouter); // ✅ ajout de la route upload
+
+
+// --- Route de debug pour vérifier les headers d'un fichier uploadé ---
+app.get("/api/debug-file/:name", (req, res) => {
+  const filePath = path.join(__dirname, "uploads", req.params.name);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "Fichier introuvable" });
+  }
+
+  const type = mime.lookup(filePath) || "inconnu";
+  res.json({
+    fichier: req.params.name,
+    mimeDetecte: type,
+    headersAttendus: {
+      "Content-Type": type,
+      "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "*"
+    }
+  });
+});
+
 
 // --- Middleware global d'erreurs ---
 app.use(errorHandler);
