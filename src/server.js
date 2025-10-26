@@ -37,7 +37,25 @@ app.use(morgan("dev"));
 app.use(requestLogger);
 
 // ✅ Servir les fichiers uploadés
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    setHeaders: (res, filePath) => {
+      // Définir Content-Type correct
+      if (filePath.endsWith(".png")) res.setHeader("Content-Type", "image/png");
+      if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) res.setHeader("Content-Type", "image/jpeg");
+      if (filePath.endsWith(".webp")) res.setHeader("Content-Type", "image/webp");
+      if (filePath.endsWith(".gif")) res.setHeader("Content-Type", "image/gif");
+      if (filePath.endsWith(".mp4")) res.setHeader("Content-Type", "video/mp4");
+      if (filePath.endsWith(".webm")) res.setHeader("Content-Type", "video/webm");
+      if (filePath.endsWith(".mp3")) res.setHeader("Content-Type", "audio/mpeg");
+      if (filePath.endsWith(".wav")) res.setHeader("Content-Type", "audio/wav");
+
+      // Autoriser l’accès cross-origin
+      res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "*");
+    },
+  })
+);
 
 // --- Route d’accueil (évite le 404 sur Render) ---
 app.get("/", (req, res) => {
