@@ -13,6 +13,7 @@ import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
 import messageRoutes from "./routes/messages.js";
 import usersRouter from "./routes/users.js";
+import uploadRouter from "./routes/upload.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 
@@ -35,7 +36,7 @@ app.use(express.json());
 app.use(morgan("dev"));
 app.use(requestLogger);
 
-// Servir les fichiers uploadés
+// ✅ Servir les fichiers uploadés
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // --- Route d’accueil (évite le 404 sur Render) ---
@@ -102,6 +103,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", usersRouter);
+app.use("/api/upload", uploadRouter); // ✅ ajout de la route upload
 
 // --- Middleware global d'erreurs ---
 app.use(errorHandler);
