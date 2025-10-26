@@ -45,7 +45,7 @@ app.use(
     setHeaders: (res, filePath) => {
       let type = mime.lookup(filePath);
 
-      // ✅ Correction manuelle pour certains cas
+      // ✅ Forcer les bons MIME types
       if (filePath.endsWith(".mp4")) type = "video/mp4";
       if (filePath.endsWith(".webm")) type = "video/webm";
       if (filePath.endsWith(".ogg")) type = "video/ogg";
@@ -55,10 +55,11 @@ app.use(
       if (type) {
         res.setHeader("Content-Type", type);
       }
-      res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
+      res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "*");
     },
   })
 );
+
 
 // --- Route d’accueil ---
 app.get("/", (req, res) => {
