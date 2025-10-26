@@ -8,12 +8,13 @@ import cors from "cors";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
+import mime from "mime-types"; // ✅ pour servir les bons Content-Type
 
 import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
 import messageRoutes from "./routes/messages.js";
 import usersRouter from "./routes/users.js";
-import uploadRouter from "./routes/upload.js";
+import uploadRouter from "./routes/upload.js"; // ✅ route upload
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 
@@ -36,28 +37,21 @@ app.use(express.json());
 app.use(morgan("dev"));
 app.use(requestLogger);
 
-// ✅ Servir les fichiers uploadés
+// ✅ Servir les fichiers uploadés avec Content-Type correct
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"), {
     setHeaders: (res, filePath) => {
-      // Définir Content-Type correct
-      if (filePath.endsWith(".png")) res.setHeader("Content-Type", "image/png");
-      if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) res.setHeader("Content-Type", "image/jpeg");
-      if (filePath.endsWith(".webp")) res.setHeader("Content-Type", "image/webp");
-      if (filePath.endsWith(".gif")) res.setHeader("Content-Type", "image/gif");
-      if (filePath.endsWith(".mp4")) res.setHeader("Content-Type", "video/mp4");
-      if (filePath.endsWith(".webm")) res.setHeader("Content-Type", "video/webm");
-      if (filePath.endsWith(".mp3")) res.setHeader("Content-Type", "audio/mpeg");
-      if (filePath.endsWith(".wav")) res.setHeader("Content-Type", "audio/wav");
-
-      // Autoriser l’accès cross-origin
-      res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "*");
+      const type = mime.lookup(filePath);
+      if (type) {
+        res.setHeader("Content-Type", type);
+      }
+      res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
     },
   })
 );
 
-// --- Route d’accueil (évite le 404 sur Render) ---
+// --- Route d’accueil ---
 app.get("/", (req, res) => {
   res.send("✅ Backend Ligdi Chat est en ligne et fonctionne correctement !");
 });
