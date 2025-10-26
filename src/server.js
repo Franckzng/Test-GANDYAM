@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Définir le domaine frontend autorisé (Vercel)
+// ✅ Domaine frontend autorisé
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://ligdi-chat-frontend.vercel.app";
 
 // --- Config globale ---
