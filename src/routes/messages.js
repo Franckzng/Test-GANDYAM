@@ -4,16 +4,15 @@ import { prisma } from "../prismaClient.js";
 import { auth } from "../middleware/auth.js";
 import multer from "multer";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const router = Router();
 
 // --- Multer config pour upload de fichiers ---
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, "..", "uploads")),
+  destination: (req, file, cb) => {
+    // ✅ Toujours utiliser le dossier uploads à la racine du projet
+    cb(null, path.join(process.cwd(), "uploads"));
+  },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
@@ -75,15 +74,15 @@ router.post("/:conversationId/upload", auth, upload.single("file"), async (req, 
   }
 
   try {
-    // Construire une URL absolue
-    const baseUrl = process.env.BASE_URL || "http://localhost:4000";
+    // ✅ Construire une URL absolue avec BASE_URL
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 4000}`;
     const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     const msg = await prisma.message.create({
       data: {
         conversationId: Number(conversationId),
         senderId: req.user.id,
-        type,
+        type: type.toUpperCase(), // IMAGE, VIDEO, AUDIO
         content: fileUrl,
       },
     });

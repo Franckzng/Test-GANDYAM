@@ -8,14 +8,14 @@ import cors from "cors";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
-import mime from "mime-types"; // ✅ pour gérer les bons Content-Type
+import mime from "mime-types";
 import fs from "fs";
 
 import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
 import messageRoutes from "./routes/messages.js";
 import usersRouter from "./routes/users.js";
-import uploadRouter from "./routes/upload.js"; // ✅ route upload
+import uploadRouter from "./routes/upload.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 
@@ -38,14 +38,14 @@ app.use(express.json());
 app.use(morgan("dev"));
 app.use(requestLogger);
 
-// ✅ Servir les fichiers uploadés avec Content-Type correct
+// ✅ Servir les fichiers uploadés depuis la racine du projet
 app.use(
   "/uploads",
-  express.static(path.join(__dirname, "uploads"), {
+  express.static(path.join(process.cwd(), "uploads"), {
     setHeaders: (res, filePath) => {
       let type = mime.lookup(filePath);
 
-      // ✅ Forcer les bons MIME types
+      // ✅ Correction manuelle pour certains cas
       if (filePath.endsWith(".mp4")) type = "video/mp4";
       if (filePath.endsWith(".webm")) type = "video/webm";
       if (filePath.endsWith(".ogg")) type = "video/ogg";
@@ -55,11 +55,10 @@ app.use(
       if (type) {
         res.setHeader("Content-Type", type);
       }
-      res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "*");
+      res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
     },
   })
 );
-
 
 // --- Route d’accueil ---
 app.get("/", (req, res) => {
@@ -68,7 +67,7 @@ app.get("/", (req, res) => {
 
 // --- Route de debug pour vérifier les headers d'un fichier uploadé ---
 app.get("/api/debug-file/:name", (req, res) => {
-  const filePath = path.join(__dirname, "uploads", req.params.name);
+  const filePath = path.join(process.cwd(), "uploads", req.params.name);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "Fichier introuvable" });
@@ -150,7 +149,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", usersRouter);
-app.use("/api/upload", uploadRouter); // ✅ ajout de la route upload
+app.use("/api/upload", uploadRouter);
 
 // --- Middleware global d'erreurs ---
 app.use(errorHandler);
